@@ -1,0 +1,56 @@
+# eks overlay: SaaS (Datadog / New Relic) へ送る設定例。
+# 使う方のコメントを外し、Secret (observability-keys) にキーを入れること。
+#
+#   kubectl -n obs-lab create secret generic observability-keys \
+#     --from-literal=DD_API_KEY=xxxx \
+#     --from-literal=NEW_RELIC_LICENSE_KEY=xxxx
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  # k8s のメタデータ (namespace, deployment 名など) を自動付与。
+  # SaaS 側でサービスマップや絞り込みに使える
+  k8sattributes:
+    auth_type: serviceAccount
+    passthrough: false
+
+exporters:
+  debug:
+    verbosity: basic
+
+  # === Datadog (日本リージョン: ap1) ===
+  # datadog:
+  #   api:
+  #     key: ${env:DD_API_KEY}
+  #     site: ap1.datadoghq.com
+
+  # === New Relic (OTLP ネイティブ) ===
+  # otlphttp/newrelic:
+  #   endpoint: https://otlp.nr-data.net
+  #   headers:
+  #     api-key: ${env:NEW_RELIC_LICENSE_KEY}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, k8sattributes, batch]
+      exporters: [debug]   # <- 使うベンダーに書き換える (例: [datadog])
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, k8sattributes, batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, k8sattributes, batch]
+      exporters: [debug]

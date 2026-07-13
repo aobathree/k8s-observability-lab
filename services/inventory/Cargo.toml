@@ -1,0 +1,20 @@
+[package]
+name = "inventory"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+
+# OpenTelemetry セットアップを簡潔にするヘルパー群
+# (OTEL_EXPORTER_OTLP_ENDPOINT / OTEL_SERVICE_NAME 環境変数を読んで初期化してくれる)
+init-tracing-opentelemetry = { version = "0.38", features = ["otlp", "tracing_subscriber_ext"] }
+axum-tracing-opentelemetry = "0.38"
+
+[profile.release]
+strip = true
+lto = "thin"

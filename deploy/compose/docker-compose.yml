@@ -1,0 +1,63 @@
+# ローカル学習環境 (docker compose)
+#
+#   docker compose up --build -d
+#   Grafana:  http://localhost:3000   (匿名ログイン有効)
+#   Gateway:  http://localhost:8080/api/products
+#
+# データの流れ:
+#   gateway/order/inventory --OTLP--> otel-collector --OTLP--> lgtm (Tempo/Loki/Prometheus/Grafana)
+
+services:
+  gateway:
+    build: ../../services/gateway
+    ports:
+      - "8080:8000"
+    environment:
+      OTEL_SERVICE_NAME: gateway
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=local
+      ORDER_URL: http://order:8000
+      INVENTORY_URL: http://inventory:8001
+    depends_on: [order, inventory, otel-collector]
+
+  order:
+    build: ../../services/order
+    environment:
+      OTEL_SERVICE_NAME: order
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=local
+      INVENTORY_URL: http://inventory:8001
+    depends_on: [inventory, otel-collector]
+
+  inventory:
+    build: ../../services/inventory
+    environment:
+      OTEL_SERVICE_NAME: inventory
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=local
+      # Rust 側のログレベル
+      RUST_LOG: info,inventory=debug
+    depends_on: [otel-collector]
+
+  # テレメトリの中継ハブ。ベンダー切り替えはここの設定だけで済む
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    environment:
+      # Datadog / New Relic を使う場合は .env に書く (otel-collector.yaml 参照)
+      DD_API_KEY: ${DD_API_KEY:-}
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:-}
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+  # Grafana + Tempo(トレース) + Loki(ログ) + Prometheus(メトリクス) の一体型学習イメージ
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000"   # Grafana UI
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin

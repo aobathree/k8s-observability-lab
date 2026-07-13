@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory
+  labels:
+    app.kubernetes.io/name: inventory
+    app.kubernetes.io/part-of: obs-lab
+spec:
+  # 在庫はインメモリなので学習用に 1 レプリカ
+  # (複数レプリカにすると Pod ごとに在庫がバラバラになる。
+  #  それ自体が「状態を持つサービスをスケールする難しさ」の教材になる)
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inventory
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inventory
+        app.kubernetes.io/part-of: obs-lab
+    spec:
+      containers:
+        - name: inventory
+          image: obs-lab/inventory:dev
+          ports:
+            - name: http
+              containerPort: 8001
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: inventory
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector:4317
+            - name: RUST_LOG
+              value: info
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: k8s.pod.name=$(K8S_POD_NAME),deployment.environment=k8s
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 25m, memory: 32Mi }
+            limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory
+  labels:
+    app.kubernetes.io/name: inventory
+spec:
+  selector:
+    app.kubernetes.io/name: inventory
+  ports:
+    - name: http
+      port: 8001
+      targetPort: http

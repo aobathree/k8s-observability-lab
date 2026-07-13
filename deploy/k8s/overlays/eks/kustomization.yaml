@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: obs-lab
+
+resources:
+  - ../../base
+  - rbac.yaml
+
+patches:
+  - path: patches/otel-collector-sa.yaml
+
+configMapGenerator:
+  - name: otel-collector-config
+    behavior: replace
+    files:
+      - config.yaml=otel-collector-config.yaml
+
+# ECR に push したイメージに差し替える。
+# <ACCOUNT_ID> と リージョンを自分の環境に合わせて書き換えること
+images:
+  - name: obs-lab/gateway
+    newName: <ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com/obs-lab/gateway
+    newTag: v0.1.0
+  - name: obs-lab/order
+    newName: <ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com/obs-lab/order
+    newTag: v0.1.0
+  - name: obs-lab/inventory
+    newName: <ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com/obs-lab/inventory
+    newTag: v0.1.0

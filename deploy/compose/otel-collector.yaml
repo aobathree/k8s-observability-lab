@@ -1,0 +1,64 @@
+# OpenTelemetry Collector 設定 (ローカル用)
+#
+# ここが Observability パイプラインの心臓部。
+#   receivers  : テレメトリの受け口 (アプリからの OTLP)
+#   processors : バッチ化・属性付与などの加工
+#   exporters  : 送り先 (Grafana LGTM / Datadog / New Relic ...)
+#
+# ベンダーを切り替えたいときはアプリのコードは一切触らず、
+# exporters と pipelines の exporters 欄を書き換えるだけでよい。
+# これが「計装は OpenTelemetry で統一する」最大の利点。
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}                # まとめて送信し負荷を下げる (本番でもほぼ必須)
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+
+exporters:
+  # --- ローカル: Grafana LGTM スタックへ ---
+  otlp/lgtm:
+    endpoint: lgtm:4317
+    tls:
+      insecure: true
+
+  # --- Datadog を試す場合: 下2行と pipelines の exporters に datadog を追加し、
+  #     .env に DD_API_KEY を設定する ---
+  # datadog:
+  #   api:
+  #     key: ${env:DD_API_KEY}
+  #     site: ap1.datadoghq.com   # 日本リージョン
+
+  # --- New Relic を試す場合: OTLP ネイティブ対応なので otlphttp でそのまま送れる ---
+  # otlphttp/newrelic:
+  #   endpoint: https://otlp.nr-data.net
+  #   headers:
+  #     api-key: ${env:NEW_RELIC_LICENSE_KEY}
+
+  # デバッグ用: Collector のログにテレメトリ内容を出力
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/lgtm, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/lgtm]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/lgtm]

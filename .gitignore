@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Rust
+services/inventory/target/
+
+# 環境変数 (APIキーを絶対にコミットしない)
+.env
+
+# IDE / OS
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
