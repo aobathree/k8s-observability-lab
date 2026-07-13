@@ -1,5 +1,6 @@
 # --- ビルドステージ ---
-FROM rust:1.95-slim AS builder
+# bookworm を付けて Debian 12 に揃える
+    FROM rust:1.95-slim-bookworm AS builder
 WORKDIR /build
 
 # 依存関係だけ先にビルドしてレイヤーキャッシュを効かせる

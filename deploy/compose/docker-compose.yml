@@ -49,9 +49,9 @@ services:
       # Datadog / New Relic を使う場合は .env に書く (otel-collector.yaml 参照)
       DD_API_KEY: ${DD_API_KEY:-}
       NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:-}
-    ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+    #ports:
+    #  - "4317:4317"   # OTLP gRPC
+    #  - "4318:4318"   # OTLP HTTP
 
   # Grafana + Tempo(トレース) + Loki(ログ) + Prometheus(メトリクス) の一体型学習イメージ
   lgtm:

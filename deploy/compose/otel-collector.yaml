@@ -39,10 +39,10 @@ exporters:
   #     site: ap1.datadoghq.com   # 日本リージョン
 
   # --- New Relic を試す場合: OTLP ネイティブ対応なので otlphttp でそのまま送れる ---
-  # otlphttp/newrelic:
-  #   endpoint: https://otlp.nr-data.net
-  #   headers:
-  #     api-key: ${env:NEW_RELIC_LICENSE_KEY}
+  otlphttp/newrelic:
+    endpoint: https://otlp.nr-data.net
+    headers:
+      api-key: ${env:NEW_RELIC_LICENSE_KEY}
 
   # デバッグ用: Collector のログにテレメトリ内容を出力
   debug:
@@ -53,12 +53,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/lgtm, debug]
+      exporters: [otlp/lgtm, otlphttp/newrelic, debug]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/lgtm]
+      exporters: [otlp/lgtm, otlphttp/newrelic]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/lgtm]
+      exporters: [otlp/lgtm, otlphttp/newrelic]
